@@ -3,11 +3,19 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace MarketPlace.Domain
 {
-    public class ClassifiedAd:Entity
+    public class ClassifiedAd:AggregateRoot<ClassifiedAdId>
     {
-        public ClassifiedAdId Id { get; private set; }
+        public UserId OwnerId { get; private set; }
+        public ClassifiedAdTitle? Title { get; private set; }
+        public ClassifiedAdText? Text { get; private set; }
+        public Price? Price { get; private set; }
+        public ClassifiedAdState State { get; private set; }
+        public UserId? ApprovedBy { get; private set; }
+        public List<Picture> Pictures { get; private set; }
+
         public ClassifiedAd(ClassifiedAdId id, UserId ownerId)
         {
+            Pictures = new List<Picture>();
             Apply(new Events.ClassifiedAdCreated
             {
                 Id = id,
@@ -43,6 +51,33 @@ namespace MarketPlace.Domain
         {
             Apply(new Events.ClassifiedAdSentForReview { Id = Id });
         }
+        public void AddPicture(Uri pictureUri, PictureSize size)
+        {
+            Apply(
+                new Events.PictureAddedToAClassifiedAd
+                {
+                    PictureId = new Guid(),
+                    ClassifiedAdId = Id,
+                    Url = pictureUri.ToString(),
+                    Height = size.Height,
+                    Width = size.Width,
+                    Order = newPictureOrder()
+                }
+            );
+            int newPictureOrder()
+                => Pictures.Any()
+                    ? Pictures.Max(x => x.Order) +1 : 0;
+        }
+        public void ResizePicture(PictureId pictureId, PictureSize newSize)
+        {
+            var picture = FindPicture(pictureId);
+            if (picture is null)
+                throw new InvalidOperationException(
+                    "Cannot resize a picture that I don't have"
+                    );
+            picture.Resize(newSize);
+        }
+
         protected override void EnsureValidState()
         {
             var valid =
@@ -53,21 +88,24 @@ namespace MarketPlace.Domain
                 ClassifiedAdState.PendingReview =>
                      Title is not null
                      && Text is not null
-                     && Price?.Amount > 0,
+                     && Price?.Amount > 0
+                     && FirstPicture.HasCorrectSize(),
                 ClassifiedAdState.Active =>
                      Title is not null
                      && Text is not null
                      && Price?.Amount > 0
+                     && FirstPicture.HasCorrectSize()
                      && ApprovedBy is not null,
-                                _ => true
+                _ => true
                         });
             if (!valid)
                 throw new InvalidEntityStateException(
                 this, $"Post-checks failed in state {State}");
         }
 
-        protected override void When(object @event)
+        public override void When(object @event)
         {
+            Picture picture;
             switch ( @event)
             {
                 case Events.ClassifiedAdCreated e:
@@ -87,15 +125,23 @@ namespace MarketPlace.Domain
                 case Events.ClassifiedAdSentForReview e:
                     State = ClassifiedAdState.PendingReview;
                     break;
+                case Events.PictureAddedToAClassifiedAd e:
+                    picture = new Picture(Apply);
+                    ApplyToEntity(picture,e);
+                    Pictures.Add(picture);
+                    break;
+                case Events.ClassifiedAdPictureResized e:
+                    picture = FindPicture(new PictureId(e.PictureId));
+                    ApplyToEntity(picture, @event);
+                    break;
             }
         }
+        private Picture FindPicture(PictureId id)
+            => Pictures.FirstOrDefault(x => x.Id == id);
 
-        public UserId OwnerId { get; private set; }
-        public ClassifiedAdTitle? Title { get; private set; }
-        public ClassifiedAdText? Text { get; private set; }
-        public Price? Price { get; private set; }
-        public ClassifiedAdState State { get; private set; }
-        public UserId? ApprovedBy { get; private set; }
+        private Picture FirstPicture
+            => Pictures.OrderBy(x => x.Order).FirstOrDefault();
+
         public enum ClassifiedAdState
         {
             PendingReview,
