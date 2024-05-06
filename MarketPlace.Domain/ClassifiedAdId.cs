@@ -1,16 +1,27 @@
-﻿using MarketPlace.Framework;
+﻿using System;
+using Marketplace.Framework;
 
-namespace MarketPlace.Domain
+namespace Marketplace.Domain
 {
-    public class ClassifiedAdId:Value<ClassifiedAdId>
+    public class ClassifiedAdId : Value<ClassifiedAdId>
     {
-        private readonly Guid _value;
+        public Guid Value { get; internal set; }
+        
+        protected ClassifiedAdId() {}
+
         public ClassifiedAdId(Guid value)
         {
-            ArgumentNullException.ThrowIfNull(nameof(_value), "Classified Ad Id cannot be empty");
-            _value = value;
+            if (value == default)
+                throw new ArgumentNullException(nameof(value), "Classified Ad id cannot be empty");
+            
+            Value = value;
         }
-        public static implicit operator Guid(ClassifiedAdId self) => self._value;
 
+        public static implicit operator Guid(ClassifiedAdId self) => self.Value;
+        
+        public static implicit operator ClassifiedAdId(string value) 
+            => new ClassifiedAdId(Guid.Parse(value));
+
+        public override string ToString() => Value.ToString();
     }
 }

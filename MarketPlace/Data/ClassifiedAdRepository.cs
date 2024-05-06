@@ -1,34 +1,23 @@
-﻿using MarketPlace.Domain;
-using Raven.Client.Documents.Session;
+﻿using Marketplace.Domain;
+
 namespace MarketPlace.Data
 {
-    public class ClassifiedAdRepository : IClassifiedAdRepository,  IDisposable
+    public class ClassifiedAdRepository : IClassifiedAdRepository
     {
-        private readonly IAsyncDocumentSession _session;
+        private readonly ClassifiedAdDbContext _dbContext;
 
-        public ClassifiedAdRepository(IAsyncDocumentSession session)
+        public ClassifiedAdRepository(ClassifiedAdDbContext dbContext)
         {
-            _session = session;
+            _dbContext = dbContext;
         }
+        public async Task Add(ClassifiedAd entity)
+        => _dbContext.ClassifiedAds.AddAsync(entity);
 
-        public Task<bool> Exists(ClassifiedAdId id)
-         => _session.Advanced.ExistsAsync(EntityId(id));
+        public async Task<bool> Exists(ClassifiedAdId id)
+         => await _dbContext.ClassifiedAds.FindAsync(id) is not null;
 
 
-        public Task<ClassifiedAd> Load(ClassifiedAdId id)
-        => _session.LoadAsync<ClassifiedAd>(EntityId(id));
-
-        public async Task Save(ClassifiedAd entity)
-        {
-            await _session.StoreAsync(entity, EntityId(entity.Id));
-            await _session.SaveChangesAsync();
-        }
-
-        public void Dispose()
-        {
-            _session.Dispose();
-        }
-        private string EntityId(ClassifiedAdId id)
-         =>   $"ClassifiedAd/{id}";
+        public async Task<ClassifiedAd?> Load(ClassifiedAdId id)
+            => await _dbContext.ClassifiedAds.FindAsync(id);
     }
 }

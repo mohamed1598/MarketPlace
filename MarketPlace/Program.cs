@@ -1,6 +1,8 @@
+using Marketplace.Domain;
+using Marketplace.Framework;
 using MarketPlace.Data;
-using MarketPlace.Domain;
 using MarketPlace.Services;
+using Microsoft.EntityFrameworkCore;
 using Raven.Client.Documents;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,29 +14,25 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var store = new DocumentStore
-{
-    Urls = new[] { "http://127.0.0.1:38888" },
-    Database = "Marketplace_Chapter6",
-    Conventions =
-                  {
-                      FindIdentityProperty = m => m.Name == "_databaseId"
-                  }
-};
-store.Conventions.RegisterAsyncIdConvention<ClassifiedAd>(
-    (dbName, entity) => Task.FromResult("ClassifiedAd/" + entity.Id.ToString()));
-store.Initialize();
-
-builder.Services.AddTransient(c => store.OpenAsyncSession());
-builder.Services.AddSingleton<ICurrencyLookup, FixedCurrencyLookup>();
-builder.Services.AddScoped<IClassifiedAdRepository, ClassifiedAdRepository>();
-builder.Services.AddSingleton<ClassifiedAdsApplicationService>();
+const string connectionString =
+ "Host=localhost:5432;Database=Marketplace_Chapter8;Username=POSTGRES;Password=mysecretpassword"; 
+builder.Services
+ .AddEntityFrameworkNpgsql()
+ .AddDbContext<ClassifiedAdDbContext>(
+ options => options.UseNpgsql(connectionString));
+//builder.Services.AddSingleton<Marketplace.Domain.ICurrencyLookup, FixedCurrencyLookup>();
+builder.Services.AddSingleton<ICurrencyLookup,FixedCurrencyLookup>();
+builder.Services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+builder.Services.AddScoped<IClassifiedAdRepository, ClassifiedAdRepository>
+();
+builder.Services.AddScoped<ClassifiedAdsApplicationService>();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.EnsureDatabase();
     app.UseSwagger();
     app.UseSwaggerUI();
 }

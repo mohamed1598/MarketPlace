@@ -1,4 +1,4 @@
-﻿using MarketPlace.Domain;
+﻿using Marketplace.Domain;
 
 namespace MarketPlace.Data
 {

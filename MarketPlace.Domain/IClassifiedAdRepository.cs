@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace MarketPlace.Domain
+namespace Marketplace.Domain
 {
     public interface IClassifiedAdRepository
     {
-        Task<bool> Exists(ClassifiedAdId id);
-
         Task<ClassifiedAd> Load(ClassifiedAdId id);
 
-        Task Save(ClassifiedAd entity);
+        Task Add(ClassifiedAd entity);
+        
+        Task<bool> Exists(ClassifiedAdId id);
     }
 }

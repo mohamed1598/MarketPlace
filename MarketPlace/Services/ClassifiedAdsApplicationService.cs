@@ -1,5 +1,5 @@
-﻿using MarketPlace.Domain;
-using MarketPlace.Framework;
+﻿using Marketplace.Domain;
+using Marketplace.Framework;
 using static MarketPlace.Contracts.ClassifiedAds;
 
 namespace MarketPlace.Services
@@ -7,19 +7,23 @@ namespace MarketPlace.Services
     public class ClassifiedAdsApplicationService:IApplicationService
     {
         private readonly IClassifiedAdRepository _repository;
-        private readonly ICurrencyLookup _currencyLookup;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly Marketplace.Domain.ICurrencyLookup _currencyLookup;
 
-        public ClassifiedAdsApplicationService(ICurrencyLookup currencyLookup, IClassifiedAdRepository repository)
+        public ClassifiedAdsApplicationService(
+            IClassifiedAdRepository repository, IUnitOfWork unitOfWork,
+            Marketplace.Domain.ICurrencyLookup currencyLookup
+        )
         {
-            _currencyLookup = currencyLookup;
             _repository = repository;
+            _unitOfWork = unitOfWork;
+            _currencyLookup = currencyLookup;
         }
 
         public Task Handle(object command) =>
             command switch
             {
-                V1.Create cmd =>
-                    HandleCreate(cmd),
+                V1.Create cmd => HandleCreate(cmd),
                 V1.SetTitle cmd =>
                     HandleUpdate(
                         cmd.Id,
@@ -40,8 +44,8 @@ namespace MarketPlace.Services
                         c => c.UpdatePrice(
                             Price.FromDecimal(
                                 cmd.Price,
-                                _currencyLookup,
-                                cmd.Currency
+                                cmd.Currency,
+                                _currencyLookup
                             )
                         )
                     ),
@@ -55,15 +59,18 @@ namespace MarketPlace.Services
 
         private async Task HandleCreate(V1.Create cmd)
         {
-            if (await _repository.Exists(new ClassifiedAdId(cmd.Id)))
-                throw new InvalidOperationException($"Entity with id {cmd.Id} already exists");
+            if (await _repository.Exists(cmd.Id.ToString()))
+                throw new InvalidOperationException(
+                    $"Entity with id {cmd.Id} already exists"
+                );
 
             var classifiedAd = new ClassifiedAd(
                 new ClassifiedAdId(cmd.Id),
                 new UserId(cmd.OwnerId)
             );
 
-            await _repository.Save(classifiedAd);
+            await _repository.Add(classifiedAd);
+            await _unitOfWork.Commit();
         }
 
         private async Task HandleUpdate(
@@ -71,17 +78,15 @@ namespace MarketPlace.Services
             Action<ClassifiedAd> operation
         )
         {
-            var classifiedAd = await _repository.Load(
-                new ClassifiedAdId(classifiedAdId)
-            );
+            var classifiedAd = await _repository
+                .Load(classifiedAdId.ToString());
             if (classifiedAd == null)
                 throw new InvalidOperationException(
-                    $"Entity with id {classifiedAdId} cannot be found"
-                );
+                    $"Entity with id {classifiedAdId} cannot be found");
 
             operation(classifiedAd);
 
-            await _repository.Save(classifiedAd);
+            await _unitOfWork.Commit();
         }
     }
 }

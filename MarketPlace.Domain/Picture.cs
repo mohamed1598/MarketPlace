@@ -1,18 +1,25 @@
-﻿using MarketPlace.Framework;
-using static MarketPlace.Domain.Picture;
+using System;
+using System.ComponentModel.DataAnnotations.Schema;
+using Marketplace.Framework;
 
-namespace MarketPlace.Domain
+namespace Marketplace.Domain
 {
     public class Picture : Entity<PictureId>
     {
-        public Picture(Action<object> applier) : base(applier)
+        // Properties to handle the persistence
+        public Guid PictureId
         {
+            get => Id.Value;
+            set {}
         }
+        
+        protected Picture() {}
 
-        internal ClassifiedAdId ParentId { get; private set; }
-        internal PictureSize Size { get; private set; }
-        internal Uri Location { get; private set; }
-        internal int Order { get; private set; }
+        // Entity state
+        public ClassifiedAdId ParentId { get; private set; }
+        public PictureSize Size { get; private set; }
+        public string Location { get; private set; }
+        public int Order { get; private set; }
 
         protected override void When(object @event)
         {
@@ -21,33 +28,36 @@ namespace MarketPlace.Domain
                 case Events.PictureAddedToAClassifiedAd e:
                     ParentId = new ClassifiedAdId(e.ClassifiedAdId);
                     Id = new PictureId(e.PictureId);
-                    Location = new Uri(e.Url);
-                    Size = new PictureSize { Height = e.Height, Width = e.Width };
+                    Location = e.Url;
+                    Size = new PictureSize {Height = e.Height, Width = e.Width};
                     Order = e.Order;
                     break;
                 case Events.ClassifiedAdPictureResized e:
-                    Size = new PictureSize { Height = e.Height, Width = e.Width };
+                    Size = new PictureSize{Height = e.Height, Width = e.Width};
                     break;
             }
         }
+        
         public void Resize(PictureSize newSize)
             => Apply(new Events.ClassifiedAdPictureResized
             {
                 PictureId = Id.Value,
-                ClassifiedAdId = ParentId,
-                Height = newSize.Height,
+                ClassifiedAdId = ParentId.Value,
+                Height = newSize.Width,
                 Width = newSize.Width
             });
 
-        internal bool HasCorrectSize()
+        public Picture(Action<object> applier) : base(applier)
         {
-            return Size.Height > 0 && Size.Width > 0;
         }
     }
 
     public class PictureId : Value<PictureId>
     {
         public PictureId(Guid value) => Value = value;
+
         public Guid Value { get; }
+        
+        protected PictureId() {}
     }
 }
