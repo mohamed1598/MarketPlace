@@ -14,10 +14,10 @@ namespace MarketPlace.Data
         => _dbContext.ClassifiedAds.AddAsync(entity);
 
         public async Task<bool> Exists(ClassifiedAdId id)
-         => await _dbContext.ClassifiedAds.FindAsync(id) is not null;
+         => await _dbContext.ClassifiedAds.FindAsync((Guid)id) is not null;
 
 
         public async Task<ClassifiedAd?> Load(ClassifiedAdId id)
-            => await _dbContext.ClassifiedAds.FindAsync(id);
+            => await _dbContext.ClassifiedAds.FindAsync((Guid)id);
     }
 }

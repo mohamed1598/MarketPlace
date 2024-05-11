@@ -37,7 +37,10 @@ namespace MarketPlace.Data
         public void Configure(EntityTypeBuilder<ClassifiedAd> builder)
         {
             builder.HasKey(x => x.ClassifiedAdId);
-            builder.OwnsOne(x => x.Id);
+            builder.OwnsOne(x => x.Id)
+            .Property(x => x.Value)
+            .HasColumnName("ClassifiedAdId")
+            .HasColumnType("uniqueidentifier");
             builder.OwnsOne(x => x.Price, p => p.OwnsOne(c => c.Currency));
             builder.OwnsOne(x => x.Text);
             builder.OwnsOne(x => x.Title);
@@ -50,7 +53,10 @@ namespace MarketPlace.Data
         public void Configure(EntityTypeBuilder<Picture> builder)
         {
             builder.HasKey(x => x.PictureId);
-            builder.OwnsOne(x => x.Id);
+            builder.OwnsOne(x => x.Id)
+            .Property(x => x.Value)
+            .HasColumnName("PictureId")
+            .HasColumnType("uniqueidentifier");
             builder.OwnsOne(x => x.ParentId);
             builder.OwnsOne(x => x.Size);
         }

@@ -1,4 +1,4 @@
-﻿using MarketPlace.Domain;
+﻿using Marketplace.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
