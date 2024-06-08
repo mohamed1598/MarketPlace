@@ -1,4 +1,5 @@
-﻿using Marketplace.Domain;
+﻿using MarketPlace.Domain.Shared;
+
 //using MarketPlace.Domain;
 using Xunit;
 

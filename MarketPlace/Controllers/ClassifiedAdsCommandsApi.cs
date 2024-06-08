@@ -1,7 +1,7 @@
-﻿using MarketPlace.Services;
+﻿using MarketPlace.ClassifiedAd;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using static MarketPlace.Contracts.ClassifiedAds;
+using static MarketPlace.ClassifiedAd.Commands;
 
 namespace MarketPlace.Controllers
 {

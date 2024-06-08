@@ -1,34 +1,36 @@
-using Marketplace.Domain;
-using Marketplace.Framework;
-using MarketPlace.Data;
-using MarketPlace.Services;
-using Microsoft.EntityFrameworkCore;
-using Raven.Client.Documents;
+using EventStore.Client;
+using MarketPlace;
+using MarketPlace.ClassifiedAd;
+using MarketPlace.Domain.Shared;
+using MarketPlace.Framework;
+using MarketPlace.Infrastructure;
+using MarketPlace.UserProfiles;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ClassifiedAdDbContext>(x => x.UseSqlServer(connectionString));
+const string connectionString = "esdb+discover://admin:changeit@localhost:2113?tls=true&tlsVerifyCert=false";
 
+var settings = EventStoreClientSettings.Create(connectionString);
+
+var client = new EventStoreClient(settings);
+
+var store = new EsAggregateStore(client);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//const string connectionString =
-// "Host=localhost:5432;Database=Marketplace_Chapter8;Username=POSTGRES;Password=mysecretpassword"; 
-//builder.Services
-// .AddEntityFrameworkNpgsql()
-// .AddDbContext<ClassifiedAdDbContext>(
-// options => options.UseNpgsql(connectionString));
-//builder.Services.AddSingleton<Marketplace.Domain.ICurrencyLookup, FixedCurrencyLookup>();
-builder.Services.AddSingleton<ICurrencyLookup,FixedCurrencyLookup>();
-builder.Services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-builder.Services.AddScoped<IClassifiedAdRepository, ClassifiedAdRepository>
-();
+var purgomalumClient = new PurgomalumClient();
+builder.Services.AddSingleton<ICurrencyLookup, FixedCurrencyLookup>();
+builder.Services.AddSingleton<IAggregateStore>(store);
+builder.Services.AddSingleton(new ClassifiedAdsApplicationService(store,new FixedCurrencyLookup()));
+builder.Services.AddScoped(c =>
+new UserProfileApplicationService(
+ text => purgomalumClient.CheckForProfanity(text).Result,
+store));
 builder.Services.AddScoped<ClassifiedAdsApplicationService>();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
