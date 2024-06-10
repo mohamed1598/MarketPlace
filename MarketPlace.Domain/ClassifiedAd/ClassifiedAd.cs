@@ -51,6 +51,14 @@ namespace MarketPlace.Domain.ClassifiedAd
         public void RequestToPublish() =>
             Apply(new Events.ClassidiedAdSentForReview { Id = Id });
 
+        public void Publish(UserId userId) =>
+            Apply(new Events.ClassifiedAdPublished
+            {
+                Id = Id,
+                ApprovedBy = userId,
+                OwnerId = OwnerId
+            });
+
         public void AddPicture(Uri pictureUri, PictureSize size)
         {
             Apply(new Events.PictureAddedToAClassifiedAd
@@ -121,23 +129,22 @@ namespace MarketPlace.Domain.ClassifiedAd
 
         protected override void EnsureValidState()
         {
-            bool valid = Id != null && OwnerId != null;
-            switch (State)
-            {
-                case ClassifiedAdState.PendingReview:
-                    valid = valid
-                            && Title != null
-                            && Text != null
-                            && Price?.Amount > 0;
-                    break;
-                case ClassifiedAdState.Active:
-                    valid = valid
-                            && Title != null
-                            && Text != null
-                            && Price?.Amount > 0
-                            && ApprovedBy != null;
-                    break;
-            }
+            var valid =
+                Id != null &&
+                OwnerId != null &&
+                (State switch
+                {
+                    ClassifiedAdState.PendingReview =>
+                        Title != null
+                        && Text != null
+                        && Price?.Amount > 0,
+                    ClassifiedAdState.Active =>
+                        Title != null
+                        && Text != null
+                        && Price?.Amount > 0
+                        && ApprovedBy != null,
+                    _ => true
+                });
 
             if (!valid)
                 throw new DomainExceptions.InvalidEntityState(this, $"Post-checks failed in state {State}");

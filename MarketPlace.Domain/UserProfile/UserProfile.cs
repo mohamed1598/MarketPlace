@@ -10,8 +10,6 @@ namespace MarketPlace.Domain.UserProfile
 {
     public class UserProfile : AggregateRoot<UserId>
     {
-        //properties to handle persistence
-        public Guid UserProfileId { get; private set; }
         //Aggregate state properties
         public FullName FullName { get; private set; }
         public DisplayName DisplayName { get; private set; }
@@ -53,8 +51,6 @@ namespace MarketPlace.Domain.UserProfile
                     Id = new UserId(e.UserId);
                     FullName = new FullName(e.FullName);
                     DisplayName = new DisplayName(e.DisplayName);
-
-                    UserProfileId = e.UserId;
                     break;
                 case Events.UserFullNameUpdated e:
                     FullName = new FullName(e.FullName);

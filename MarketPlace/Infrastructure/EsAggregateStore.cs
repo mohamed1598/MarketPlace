@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MarketPlace.Infrastructure
 {
-    public class EsAggregateStore:IAggregateStore
+    public partial class EsAggregateStore:IAggregateStore
     {
         private readonly EventStoreClient _connection;
 
@@ -17,24 +17,14 @@ namespace MarketPlace.Infrastructure
             if (aggregate == null)
                 throw new ArgumentNullException(nameof(aggregate));
 
-            var changes = aggregate.GetChanges()
-                .Select(@event =>
-                    new EventData(
-                        eventId: Uuid.NewUuid(),
-                        type: @event.GetType().Name,
-                        data: Serialize(@event),
-                        metadata: Serialize(new EventMetadata
-                        { ClrType = @event.GetType().AssemblyQualifiedName })
-                    ))
-                .ToArray();
+            var changes = aggregate.GetChanges().ToArray();
 
             if (!changes.Any()) return;
 
             var streamName = GetStreamName<T, TId>(aggregate);
-
-            await _connection.AppendToStreamAsync(
+            await _connection.AppendEvents(
                 streamName,
-                StreamState.Any,
+               aggregate.Version,
                 changes);
 
             aggregate.ClearChanges();
@@ -53,15 +43,7 @@ namespace MarketPlace.Infrastructure
             stream,
             StreamPosition.Start).ToListAsync();
 
-            aggregate.Load(page.Select(resolvedEvent =>
-            {
-                var meta = JsonConvert.DeserializeObject<EventMetadata>(
-                    Encoding.UTF8.GetString(resolvedEvent.Event.Metadata.ToArray()));
-                var dataType = Type.GetType(meta.ClrType);
-                var jsonData = Encoding.UTF8.GetString(resolvedEvent.Event.Data.ToArray());
-                var data = JsonConvert.DeserializeObject(jsonData, dataType);
-                return data;
-            }).ToArray());
+            aggregate.Load(page.Select(resolvedEvent => resolvedEvent.Desterilize()).ToArray());
 
             return aggregate;
         }
@@ -88,10 +70,5 @@ namespace MarketPlace.Infrastructure
         private static string GetStreamName<T, TId>(T aggregate)
             where T : AggregateRoot<TId> where TId:Value<TId>
             => $"{typeof(T).Name}-{aggregate.Id.ToString()}";
-
-        private class EventMetadata
-        {
-            public string ClrType { get; set; }
-        }
     }
 }
