@@ -6,12 +6,10 @@ namespace MarketPlace.UserProfiles
     public static class Queries
     {
         public static Task<UserDetails> GetUserDetails(
-            this Func<IAsyncDocumentSession> getSession,
+            this IAsyncDocumentSession session,
             Guid id
         )
         {
-            using var session = getSession();
-
             return session.LoadAsync<UserDetails>(id.ToString());
         }
     }

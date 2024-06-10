@@ -6,37 +6,34 @@ namespace MarketPlace.Infrastructure
 {
     public class RavenDbCheckpointStore:ICheckPointStore
     {
-        private readonly Func<IAsyncDocumentSession> _getSession;
+        private readonly IAsyncDocumentSession _session;
         private readonly string _checkpointName;
 
-        public RavenDbCheckpointStore(Func<IAsyncDocumentSession> getSession, string checkpointName)
+        public RavenDbCheckpointStore(IAsyncDocumentSession session, string checkpointName)
         {
-            _getSession = getSession;
+            _session = session;
             _checkpointName = checkpointName;
         }
         public async Task<Position> GetCheckpoint()
         {
-            using var session = _getSession();
-            var checkpoint = await session
+            var checkpoint = await _session
                 .LoadAsync<Checkpoint>(_checkpointName);
             return checkpoint?.Position ?? Position.Start;
         }
         
         public async Task StoreCheckpoint(Position position)
         {
-            using var session = _getSession();
-
-            var checkpoint = await session.LoadAsync<Checkpoint>(_checkpointName);
+            var checkpoint = await _session.LoadAsync<Checkpoint>(_checkpointName);
             if(checkpoint is null)
             {
                 checkpoint = new Checkpoint
                 {
                     Id = _checkpointName
                 };
-                await session.StoreAsync(checkpoint);
+                await _session.StoreAsync(checkpoint);
             }
             checkpoint.Position = position;
-            await session.SaveChangesAsync();
+            await _session.SaveChangesAsync();
         }
     }
 }

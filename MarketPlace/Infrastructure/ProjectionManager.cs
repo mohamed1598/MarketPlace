@@ -42,8 +42,11 @@ namespace MarketPlace.Infrastructure
             try
             {
                 var @event = resolvedEvent.Desterilize();
-
-                await Task.WhenAll(_projections.Select(x => x.Project(@event)));
+                foreach(var item in _projections)
+                {
+                    await item.Project(@event);
+                }
+                //await Task.WhenAll(_projections.Select(x => x.Project(@event)));
 
                 await _checkpointStore.StoreCheckpoint(resolvedEvent.OriginalPosition.Value);
             }catch(Exception ex) { }

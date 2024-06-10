@@ -13,6 +13,7 @@ using static Raven.Client.Constants;
 using Raven.Client.Documents.Session;
 using MarketPlace.Projections;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +32,10 @@ builder.Services.AddSingleton(new ClassifiedAdsApplicationService(store, new Fix
 builder.Services.AddSingleton(client);
 // rabendb
 var documentStore = ConfigureRavenDb(builder.Configuration.GetSection("ravenDb"));
-Func<IAsyncDocumentSession> getSession = () => documentStore.OpenAsyncSession();
-builder.Services.AddTransient(c => getSession());
-
+builder.Services.AddScoped<IAsyncDocumentSession>(provider =>
+{
+    return documentStore.OpenAsyncSession();
+});
 // services
 var purgomalumClient = new PurgomalumClient();
 builder.Services.AddSingleton<ICurrencyLookup, FixedCurrencyLookup>();
@@ -44,15 +46,18 @@ store));
 builder.Services.AddScoped<ClassifiedAdsApplicationService>();
 
 
-var projectionManager = new ProjectionManager(client,
-                new RavenDbCheckpointStore(getSession, "readmodels"),
-                new ClassifiedAdDetailsProjection(getSession,
-                    async userId => (await getSession.GetUserDetails(userId))?.DisplayName),
-                new ClassifiedAdUpcasters(client,
-                    async userId => (await getSession.GetUserDetails(userId))?.PhotoUrl),
-                new UserDetailsProjection(getSession));
 
-builder.Services.AddSingleton(projectionManager);
+builder.Services.AddSingleton<ProjectionManager>(provider =>
+{
+    var session = documentStore.OpenAsyncSession();
+    return new ProjectionManager(client,
+                new RavenDbCheckpointStore(session, "readmodels"),
+                new ClassifiedAdDetailsProjection(session,
+                    async userId => (await session.GetUserDetails(userId))?.DisplayName),
+                new ClassifiedAdUpcasters(client,
+                    async userId => (await session.GetUserDetails(userId))?.PhotoUrl),
+                new UserDetailsProjection(session));
+});
 builder.Services.AddHostedService<HostedService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

@@ -11,8 +11,8 @@ namespace MarketPlace.Projections
     {
         private readonly Func<Guid, Task<string>> _getUserDisplayName;
 
-        public ClassifiedAdDetailsProjection(Func<IAsyncDocumentSession> getSession, Func<Guid, Task<string>> getUserDisplayName)
-            :base(getSession) 
+        public ClassifiedAdDetailsProjection(IAsyncDocumentSession session, Func<Guid, Task<string>> getUserDisplayName)
+            :base(session) 
         {
             _getUserDisplayName = getUserDisplayName;
         }

@@ -7,11 +7,11 @@ namespace MarketPlace.Infrastructure
 {
     public abstract class RavenDbProjection<T> : IProjection
     {
-        protected Func<IAsyncDocumentSession> GetSession { get; }
+        protected IAsyncDocumentSession _session { get; }
 
-        protected RavenDbProjection(Func<IAsyncDocumentSession> getSession)
+        protected RavenDbProjection(IAsyncDocumentSession session)
         {
-            GetSession = getSession;
+            _session = session;
         }
 
         public abstract Task Project(object @event);
@@ -45,10 +45,9 @@ namespace MarketPlace.Infrastructure
         }
         protected async Task UsingSession(Func<IAsyncDocumentSession , Task> operation)
         {
-            using var session = GetSession();
 
-            await operation(session);
-            await session.SaveChangesAsync();
+            await operation(_session);
+            await _session.SaveChangesAsync();
         }
     }
 }

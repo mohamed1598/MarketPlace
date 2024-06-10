@@ -6,7 +6,7 @@ namespace MarketPlace.Projections
 {
     public class UserDetailsProjection : RavenDbProjection<ReadModels.UserDetails>
     {
-        public UserDetailsProjection(Func<IAsyncDocumentSession> getSession):base(getSession)
+        public UserDetailsProjection(IAsyncDocumentSession session):base(session)
         {
             
         }
