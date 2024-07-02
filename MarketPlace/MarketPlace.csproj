@@ -25,7 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MarketPlace.Domain\MarketPlace.Domain.csproj" />
+    <Folder Include="Controllers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ads\MarketPlace.Ads\MarketPlace.Ads.csproj" />
+    <ProjectReference Include="..\Users\MarketPlace.Users\MarketPlace.Users.csproj" />
   </ItemGroup>
 
 </Project>

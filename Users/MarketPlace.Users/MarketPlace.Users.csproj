@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\MarketPlace.EventStore\MarketPlace.EventStore.csproj" />
+    <ProjectReference Include="..\..\Shared\MarketPlace.RavenDb\MarketPlace.RavenDb.csproj" />
+    <ProjectReference Include="..\..\Shared\MarketPlace.WebAPI\MarketPlace.WebAPI.csproj" />
+    <ProjectReference Include="..\MarketPlace.Users.Domain\MarketPlace.Users.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

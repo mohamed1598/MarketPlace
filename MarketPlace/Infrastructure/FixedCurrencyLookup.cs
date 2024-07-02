@@ -1,4 +1,5 @@
-﻿using MarketPlace.Domain.Shared;
+﻿
+using MarketPlace.Ads.Domain.Shared;
 
 namespace MarketPlace.Infrastructure
 {

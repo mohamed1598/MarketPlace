@@ -1,20 +1,18 @@
 using EventStore.Client;
-using MarketPlace;
-using MarketPlace.ClassifiedAd;
-using MarketPlace.Domain.Shared;
+using MarketPlace.Ads;
+using MarketPlace.Ads.Domain.Shared;
+using MarketPlace.EventStore;
 using MarketPlace.Framework;
 using MarketPlace.Infrastructure;
-using MarketPlace.UserProfiles;
+using MarketPlace.Modules.Images;
+using MarketPlace.Users;
+using MarketPlace.WebAPI;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide;
-using static Raven.Client.Constants;
 using Raven.Client.Documents.Session;
-using MarketPlace.Projections;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using System.Security.Cryptography.X509Certificates;
-using Microsoft.Extensions.DependencyInjection;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -28,37 +26,52 @@ var client = new EventStoreClient(settings);
 
 var store = new EsAggregateStore(client);
 builder.Services.AddSingleton<IAggregateStore>(store);
-builder.Services.AddSingleton(new ClassifiedAdsApplicationService(store, new FixedCurrencyLookup()));
+//builder.Services.AddSingleton(new ClassifiedAdsApplicationService(store, new FixedCurrencyLookup()));
 builder.Services.AddSingleton(client);
 // rabendb
 var documentStore = ConfigureRavenDb(builder.Configuration.GetSection("ravenDb"));
+builder.Services.AddSingleton(new ImageQueryService(ImageStorage.GetFile));
+builder.Services.AddSingleton<EventStoreClient>(client);
 builder.Services.AddScoped<IAsyncDocumentSession>(provider =>
 {
     return documentStore.OpenAsyncSession();
 });
+builder.Services.AddSingleton(documentStore);
 // services
 var purgomalumClient = new PurgomalumClient();
 builder.Services.AddSingleton<ICurrencyLookup, FixedCurrencyLookup>();
-builder.Services.AddScoped(c =>
-new UserProfileApplicationService(
- text => purgomalumClient.CheckForProfanity(text).Result,
-store));
-builder.Services.AddScoped<ClassifiedAdsApplicationService>();
+//builder.Services.AddScoped(c =>
+//new UserProfileApplicationService(
+// text => purgomalumClient.CheckForProfanity(text).Result,
+//store));
+//builder.Services.AddScoped<ClassifiedAdsApplicationService>();
 
 
 
-builder.Services.AddSingleton<ProjectionManager>(provider =>
-{
-    var session = documentStore.OpenAsyncSession();
-    return new ProjectionManager(client,
-                new RavenDbCheckpointStore(session, "readmodels"),
-                new ClassifiedAdDetailsProjection(session,
-                    async userId => (await session.GetUserDetails(userId))?.DisplayName),
-                new ClassifiedAdUpcasters(client,
-                    async userId => (await session.GetUserDetails(userId))?.PhotoUrl),
-                new UserDetailsProjection(session));
-});
-builder.Services.AddHostedService<HostedService>();
+//builder.Services.AddSingleton<ProjectionManager>(provider =>
+//{
+//    var session = documentStore.OpenAsyncSession();
+//    return new ProjectionManager(client,
+//                new RavenDbCheckpointStore(session, "readmodels"),
+//                new ClassifiedAdDetailsProjection(session,
+//                    async userId => (await session.GetUserDetails(userId))?.DisplayName),
+//                new ClassifiedAdUpcasters(client,
+//                    async userId => (await session.GetUserDetails(userId))?.PhotoUrl),
+//                new UserDetailsProjection(session));
+//});
+builder.Services.AddHostedService<EventStoreService>();
+builder.Services
+                .AddAuthentication(
+                    CookieAuthenticationDefaults.AuthenticationScheme
+                )
+                .AddCookie();
+
+builder.Services
+    .AddMvcCore(
+        options => options.Conventions.Add(new CommandConvention())
+    );
+builder.Services.AddUsersModule("Users", purgomalumClient.CheckForProfanity);
+builder.Services.AddAdsModule("ClassifiedAds",new FixedCurrencyLookup(), ImageStorage.UploadFile);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
